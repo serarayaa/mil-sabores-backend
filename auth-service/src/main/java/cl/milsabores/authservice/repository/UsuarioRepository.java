@@ -7,9 +7,12 @@ import java.util.Optional;
 
 public interface UsuarioRepository extends JpaRepository<Usuario, String> {
 
-    // Buscar por idfirebase (para que calce con tu app / tests)
+    // Buscar por idfirebase
     Optional<Usuario> findByIdfirebase(String idfirebase);
 
-    // Buscar por correo (para login)
+    // Buscar por correo (login)
     Optional<Usuario> findByMail(String mail);
+
+    // Validar correos repetidos
+    boolean existsByMail(String mail);
 }
