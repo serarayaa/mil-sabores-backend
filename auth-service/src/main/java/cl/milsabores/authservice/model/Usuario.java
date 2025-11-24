@@ -8,14 +8,14 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Entity          // Mapea la clase a una tabla en la BD
-@Data            // Genera getters/setters, toString, equals, hashCode
+@Entity
+@Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
 public class Usuario {
 
-    @Id          // RUT será la clave primaria
+    @Id
     private String rut;
 
     private String nombre;
@@ -24,6 +24,6 @@ public class Usuario {
     private Integer idrol;
     private String idfirebase;
 
-    @Lob        // Imagen como arreglo de bytes (opcional)
+    @Lob
     private byte[] imagen;
 }
