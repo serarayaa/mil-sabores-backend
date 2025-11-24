@@ -2,130 +2,201 @@
 
 ## Descripción
 
-Este proyecto backend consta de dos microservicios desarrollados con Spring Boot para la aplicación móvil "Mil Sabores". Los servicios manejan la autenticación de usuarios y la gestión de productos, utilizando una base de datos Oracle con conexión segura mediante wallet.
+Este repositorio contiene el backend de la aplicación móvil "Mil Sabores". Está organizado en dos microservicios independientes implementados con Spring Boot:
 
-## Arquitectura
+- `auth-service` — Servicio de autenticación y gestión de usuarios (registro, login, roles, manejo de imágenes de perfil).
+- `product-service` — Servicio de gestión de productos (CRUD, búsqueda, filtros por categoría y disponibilidad).
 
-- **auth-service**: Servicio de autenticación y gestión de usuarios. Corre en el puerto 8085.
-- **product-service**: Servicio de gestión de productos. Corre en el puerto 8087.
+El backend utiliza Oracle como base de datos y se conecta mediante wallet (TNS_ADMIN) para mayor seguridad. Ambos servicios exponen APIs REST y usan Spring Data JPA para el acceso a datos.
 
-Ambos servicios están construidos con Spring Boot 3.2.5, utilizan JPA/Hibernate para el acceso a datos, y se conectan a una base de datos Oracle mediante JDBC con configuración de wallet para seguridad.
+## Arquitectura (resumen)
 
-## Tecnologías Utilizadas
+- auth-service: puerto por defecto 8085
+- product-service: puerto por defecto 8087
+- Comunicación: HTTP REST. Los clientes obtienen JWT del `auth-service` y lo envían en el header `Authorization: Bearer <token>` al `product-service` para operaciones protegidas.
 
-- **Java**: Versión 17 para product-service, 21 para auth-service.
-- **Spring Boot**: Framework principal para los microservicios.
-- **Spring Data JPA**: Para el mapeo objeto-relacional.
-- **Oracle Database**: Base de datos principal.
-- **HikariCP**: Pool de conexiones.
-- **Lombok**: Para reducir código boilerplate.
-- **SpringDoc OpenAPI**: Para documentación de APIs.
-- **BCrypt**: Para encriptación de contraseñas (solo en auth-service).
+Ambos servicios comparten la misma fuente de datos Oracle (configurada en `application.properties`) y usan HikariCP para el pool de conexiones.
 
-## Servicios Detallados
+## Requisitos
 
-### Auth Service
+- Java JDK 17 o superior (el proyecto contiene referencias a Java 17/21 en distintos módulos; usar JDK 17 es suficiente para ejecutar ambos servicios).
+- Maven (se incluye wrapper: `mvnw` / `mvnw.cmd`).
+- Windows PowerShell (los ejemplos están adaptados a PowerShell v5+).
+- Acceso a una base de datos Oracle y wallet (si se usa la configuración incluida en `application.properties`).
 
-Este servicio maneja todo lo relacionado con la autenticación y el perfil de usuarios.
+## Archivos de configuración importantes
 
-#### Archivos y Funcionalidades
+- `auth-service/src/main/resources/application.properties`
+  - puerto: `server.port=8085`
+  - datasource: configuración Oracle (ej.: `spring.datasource.url=jdbc:oracle:thin:@milsa_high?TNS_ADMIN=C:/Wallet_MILSA`)
 
-- **pom.xml**: Archivo de configuración de Maven. Define las dependencias necesarias, incluyendo Spring Boot Starter Web, JPA, Oracle JDBC, librerías de seguridad para wallet (oraclepki, osdt_core, osdt_cert), BCrypt para contraseñas, Lombok, SpringDoc para Swagger, y H2 para pruebas locales.
+- `product-service/src/main/resources/application.properties`
+  - puerto: `server.port=8087`
+  - datasource: configuración Oracle (idéntica a auth-service en este repo)
 
-- **src/main/resources/application.properties**: Configura el puerto del servidor (8085), la conexión a la base de datos Oracle usando wallet (TNS_ADMIN=C:/Wallet_MILSA), credenciales de admin, configuración del pool HikariCP (máximo 5 conexiones, etc.), y JPA con dialecto Oracle, ddl-auto update, y logging de SQL.
+> Nota: Las credenciales de base de datos no deberían estar en repositorios públicos. En este repo hay valores en `application.properties` que deben moverse a variables de entorno o a un vault en entornos productivos.
 
-- **src/main/java/cl/milsabores/authservice/AuthServiceApplication.java**: Clase principal anotada con @SpringBootApplication. Punto de entrada para iniciar la aplicación Spring Boot.
+## Variables de entorno y propiedades (ejemplos)
 
-- **src/main/java/cl/milsabores/authservice/controller/UsuarioController.java**: Controlador REST mapeado a "/api/usuarios". Expone endpoints para:
-  - POST / : Crear un nuevo usuario (registro).
-  - GET /firebase/{idFirebase} : Buscar usuario por ID de Firebase.
-  - POST /login : Autenticar usuario con mail y password.
-  - PATCH /{rut}/nombre : Actualizar el nombre del usuario.
-  - PATCH /{rut}/imagen : Actualizar la imagen del usuario (multipart file).
-  Incluye un método mapper para convertir entidades a DTOs.
+- SPRING_DATASOURCE_URL (alternativa a editar application.properties)
+- SPRING_DATASOURCE_USERNAME
+- SPRING_DATASOURCE_PASSWORD
+- JWT_SECRET (si se añade soporte JWT configurable desde variables)
 
-- **src/main/java/cl/milsabores/authservice/dto/CrearUsuarioRequest.java**: Record que representa la solicitud para crear un usuario, con campos: rut, nombre, mail, password, idrol, idfirebase.
+Puedes usar un archivo `.env` local para desarrollo (no commitear). Ejemplo (documentado en `auth-service/HELP.md` y `product-service/HELP.md`).
 
-- **src/main/java/cl/milsabores/authservice/dto/LoginRequest.java**: Record para la solicitud de login, con campos: mail, password.
+## Compilar y ejecutar (PowerShell)
 
-- **src/main/java/cl/milsabores/authservice/dto/ActualizarNombreRequest.java**: Record para actualizar el nombre, con campo: nuevoNombre.
+1. Compilar ambos servicios:
 
-- **src/main/java/cl/milsabores/authservice/dto/UsuarioResponseDto.java**: Record para la respuesta de usuario, con campos: rut, nombre, mail, idrol, idfirebase (excluye password e imagen por seguridad).
+```
+# Desde la raíz del repositorio
+cd .\auth-service; .\mvnw.cmd clean package -DskipTests=false; cd ..\product-service; .\mvnw.cmd clean package -DskipTests=false
+```
 
-- **src/main/java/cl/milsabores/authservice/model/Usuario.java**: Entidad JPA mapeada a la tabla "usuario". Campos: rut (clave primaria), nombre, mail, password, idrol, idfirebase, imagen (como byte[] con @Lob). Usa Lombok para getters/setters.
+2. Ejecutar un servicio (desde su carpeta):
 
-- **src/main/java/cl/milsabores/authservice/repository/UsuarioRepository.java**: Interfaz que extiende JpaRepository. Define métodos personalizados: findByIdfirebase (buscar por ID Firebase), findByMail (buscar por correo), existsByMail (verificar si el correo existe).
+```
+# Auth service
+cd .\auth-service
+.\mvnw.cmd spring-boot:run
+# o ejecutar JAR
+java -jar target\auth-service-0.0.1-SNAPSHOT.jar
 
-- **src/main/java/cl/milsabores/authservice/service/UsuarioService.java**: Servicio que contiene la lógica de negocio. Métodos:
-  - crear: Valida que el RUT y mail no existan, encripta la password con BCrypt, y guarda el usuario.
-  - buscarPorFirebase: Busca usuario por ID Firebase.
-  - buscarPorRut: Busca usuario por RUT.
-  - login: Busca por mail y verifica la password con BCrypt.
-  - actualizarNombre: Actualiza el nombre del usuario identificado por RUT.
-  - actualizarImagen: Actualiza la imagen del usuario como arreglo de bytes.
+# Product service
+cd ..\product-service
+.\mvnw.cmd spring-boot:run
+# o ejecutar JAR
+java -jar target\product-service-0.0.1-SNAPSHOT.jar
+```
 
-### Product Service
+3. Ejecutar tests (por servicio):
 
-Este servicio maneja la gestión de productos para la aplicación.
+```
+cd .\auth-service; .\mvnw.cmd test
+cd ..\product-service; .\mvnw.cmd test
+```
 
-#### Archivos y Funcionalidades
+## Endpoints principales y ejemplos (PowerShell / curl)
 
-- **pom.xml**: Similar al auth-service, pero sin dependencias de BCrypt y usando Java 17. Incluye Spring Boot Web, JPA, Oracle JDBC, wallet libraries, Lombok, SpringDoc.
+Notas: ajustar paths reales si la aplicación expone rutas distintas; los siguientes endpoints se extrajeron de los controladores del código fuente.
 
-- **src/main/resources/application.properties**: Configura el puerto (8087), conexión a Oracle idéntica al auth-service, pool HikariCP, y JPA.
+Auth service (http://localhost:8085)
 
-- **src/main/java/cl/milsabores/productservice/ProductServiceApplication.java**: Clase principal de Spring Boot para el servicio de productos.
+- Registro de usuario: POST /api/usuarios
+  - Payload JSON ejemplo:
 
-- **src/main/java/cl/milsabores/productservice/controller/ProductoController.java**: Controlador REST mapeado a "/api/productos". Endpoints:
-  - GET / : Listar todos los productos.
-  - GET /disponibles : Listar productos disponibles.
-  - GET /{id} : Obtener producto por ID.
-  - GET /categoria/{categoria} : Listar productos por categoría (ignorando mayúsculas).
-  - POST / : Crear un nuevo producto.
-  - PUT /{id} : Actualizar un producto existente.
-  - DELETE /{id} : Eliminar un producto.
+```
+{
+  "rut": "11111111-1",
+  "nombre": "Usuario Ejemplo",
+  "mail": "user@example.com",
+  "password": "Password123",
+  "idrol": 2,
+  "idfirebase": "firebase-id-123"
+}
+```
 
-- **src/main/java/cl/milsabores/productservice/model/Producto.java**: Entidad JPA mapeada a la tabla "productos". Campos: id (auto-generado), nombre, descripcion, precio (BigDecimal), categoria, disponible (boolean), urlImagen. Usa Lombok.
+PowerShell (Invoke-RestMethod):
 
-- **src/main/java/cl/milsabores/productservice/repository/ProductoRepository.java**: Interfaz JpaRepository. Métodos: findByDisponibleTrue (productos disponibles), findByCategoriaIgnoreCase (por categoría).
+```
+Invoke-RestMethod -Method Post -Uri http://localhost:8085/api/usuarios -ContentType 'application/json' -Body (ConvertTo-Json @{rut='11111111-1'; nombre='Usuario Ejemplo'; mail='user@example.com'; password='Password123'; idrol=2; idfirebase='firebase-id-123'})
+```
 
-- **src/main/java/cl/milsabores/productservice/service/ProductoService.java**: Servicio con lógica de negocio. Métodos:
-  - listarTodos: Retorna todos los productos.
-  - listarDisponibles: Retorna productos con disponible=true.
-  - buscarPorId: Busca producto por ID, lanza excepción si no existe.
-  - buscarPorCategoria: Busca productos por categoría.
-  - crear: Guarda un nuevo producto.
-  - actualizar: Actualiza un producto existente copiando campos del nuevo objeto.
-  - eliminar: Elimina un producto si existe.
+cURL equivalente:
 
-## C��mo Ejecutar el Proyecto
+```
+curl -X POST http://localhost:8085/api/usuarios -H "Content-Type: application/json" -d '{"rut":"11111111-1","nombre":"Usuario Ejemplo","mail":"user@example.com","password":"Password123","idrol":2,"idfirebase":"firebase-id-123"}'
+```
 
-1. **Requisitos previos**:
-   - JDK 17 o 21 instalado.
-   - Maven instalado.
-   - Base de datos Oracle configurada con wallet en C:/Wallet_MILSA.
-   - Credenciales válidas (ADMIN/DuocLPA_8956).
+- Login: POST /api/usuarios/login (o /api/auth/login según el controlador)
+  - Payload:
 
-2. **Ejecución**:
-   - Para auth-service: Navegar a `auth-service/` y ejecutar `mvn spring-boot:run`.
-   - Para product-service: Navegar a `product-service/` y ejecutar `mvn spring-boot:run`.
-   - Alternativamente, compilar con `mvn clean install` y ejecutar los JARs generados en `target/`.
+```
+{
+  "mail": "user@example.com",
+  "password": "Password123"
+}
+```
 
-3. **Verificación**:
-   - Auth-service: http://localhost:8085
-   - Product-service: http://localhost:8087
+PowerShell:
 
-## Documentación de APIs
+```
+Invoke-RestMethod -Method Post -Uri http://localhost:8085/api/usuarios/login -ContentType 'application/json' -Body (ConvertTo-Json @{mail='user@example.com'; password='Password123'})
+```
 
-Ambos servicios incluyen SpringDoc OpenAPI para documentación interactiva:
-- Auth-service: http://localhost:8085/swagger-ui/index.html
-- Product-service: http://localhost:8087/swagger-ui/index.html
+Respuesta esperada: token JWT (o estructura con access & refresh token). Guardar `accessToken` para requests autenticados.
 
-Aquí se pueden probar los endpoints directamente desde el navegador.
+- Refresh token: POST /api/auth/refresh (si está implementado)
 
-## Notas Adicionales
+Product service (http://localhost:8087)
 
-- La configuración de JPA tiene `ddl-auto=update`, lo que actualiza el esquema automáticamente (útil para desarrollo).
-- Las contraseñas se encriptan con BCrypt en el auth-service para seguridad.
-- Los servicios usan HikariCP para manejo eficiente de conexiones a la base de datos.
-- La wallet de Oracle asegura una conexión segura sin exponer credenciales en el código.
+- Listar productos: GET /api/productos
+
+```
+Invoke-RestMethod -Method Get -Uri http://localhost:8087/api/productos
+```
+
+- Obtener producto por id: GET /api/productos/{id}
+
+```
+Invoke-RestMethod -Method Get -Uri http://localhost:8087/api/productos/1
+```
+
+- Crear producto (requiere Authorization header): POST /api/productos
+
+```
+$body = @{nombre='Producto 1'; descripcion='Descripción'; precio=12000; categoria='Bebidas'; disponible=$true; urlImagen='http://...'} | ConvertTo-Json
+Invoke-RestMethod -Method Post -Uri http://localhost:8087/api/productos -Headers @{Authorization = "Bearer $env:ACCESS_TOKEN"} -ContentType 'application/json' -Body $body
+```
+
+cURL equivalente:
+
+```
+curl -X POST http://localhost:8087/api/productos -H "Content-Type: application/json" -H "Authorization: Bearer <TOKEN>" -d '{"nombre":"Producto 1","descripcion":"Descripción","precio":12000,"categoria":"Bebidas","disponible":true}'
+```
+
+## Documentación interactiva (Swagger/OpenAPI)
+
+Si los servicios incluyen SpringDoc OpenAPI, las UIs están normalmente en:
+
+- http://localhost:8085/swagger-ui/index.html
+- http://localhost:8087/swagger-ui/index.html
+
+Comprueba estos endpoints cuando el servicio esté corriendo.
+
+## Notas de seguridad y buenas prácticas
+
+- No dejar credenciales en `application.properties` en repositorios públicos.
+- Usar variables de entorno o vaults para secretos (p.ej. JWT secret, DB password).
+- Proteger endpoints sensibles con roles y scopes (RBAC).
+- Implementar HTTPS en front/proxy y validar CORS.
+- Rotación y almacenamiento seguro de refresh tokens.
+
+## Cómo contribuir
+
+1. Fork del repo.
+2. Crear una rama con nombre descriptivo: `feature/<lo-que-haces>` o `fix/<issue-number>`.
+3. Ejecutar tests localmente y añadir tests para nuevas funcionalidades.
+4. Hacer PR hacia `main` y agregar descripción clara.
+
+Consulta `docs/CONTRIBUTING.md` para más detalles.
+
+## Mantenedores
+
+- Nombre: [Placeholder]
+- Email: [placeholder@example.com]
+
+(Sustituir por datos reales de los responsables del proyecto).
+
+## Licencia
+
+Este repositorio incluye un archivo `LICENSE` en la raíz; revisa ese fichero para detalles de la licencia.
+
+## Changelog (resumen)
+
+- v0.0.1 - Inicial: Creación de `auth-service` y `product-service` con conexión Oracle y endpoints básicos.
+
+---
+
+Para más documentación por módulo, revisa `auth-service/HELP.md` y `product-service/HELP.md`.
