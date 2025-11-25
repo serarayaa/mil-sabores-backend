@@ -7,5 +7,7 @@ public record CrearUsuarioRequest(
         String mail,
         String password,
         Integer idrol,
-        String idfirebase
+        String idfirebase,
+        // 🔹 Nueva propiedad: fecha de nacimiento en formato "dd-MM-yyyy", ej: "10-05-2020"
+        String fechaNac
 ) {}
