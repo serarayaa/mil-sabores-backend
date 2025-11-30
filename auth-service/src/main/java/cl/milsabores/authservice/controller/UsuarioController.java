@@ -4,6 +4,8 @@ import cl.milsabores.authservice.dto.ActualizarNombreRequest;
 import cl.milsabores.authservice.dto.CrearUsuarioRequest;
 import cl.milsabores.authservice.dto.LoginRequest;
 import cl.milsabores.authservice.dto.UsuarioResponseDto;
+import cl.milsabores.authservice.dto.RecuperarPasswordRequest;
+import cl.milsabores.authservice.dto.ResetPasswordRequest;
 import cl.milsabores.authservice.model.Usuario;
 import cl.milsabores.authservice.service.UsuarioService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,6 +46,37 @@ public class UsuarioController {
             return ResponseEntity.ok(respuesta);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
+        }
+    }
+
+    // ============================
+    // RECUPERAR CONTRASEÑA (SIMULADO)
+    // ============================
+
+    /**
+     * Paso 1: el usuario ingresa su correo para iniciar la recuperación.
+     * Siempre respondemos el mismo mensaje por seguridad.
+     */
+    @PostMapping("/recover-password")
+    public ResponseEntity<?> recoverPassword(@RequestBody RecuperarPasswordRequest request) {
+        usuarioService.iniciarRecuperacionContrasena(request.mail());
+
+        return ResponseEntity.ok(
+                "Si el correo está registrado, enviaremos instrucciones para recuperar la contraseña."
+        );
+    }
+
+    /**
+     * Paso 2: el usuario define una nueva contraseña.
+     * Flujo académico: no usamos token, solo el correo.
+     */
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
+        try {
+            usuarioService.resetearContrasena(request.mail(), request.nuevaPassword());
+            return ResponseEntity.ok("Contraseña actualizada correctamente.");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 

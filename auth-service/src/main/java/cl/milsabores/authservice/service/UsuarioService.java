@@ -77,7 +77,7 @@ public class UsuarioService {
     // LOGIN
     // ============================
     public UsuarioResponseDto login(LoginRequest request) {
-        // Asumo que LoginRequest tiene: String email, String password
+        // Asumo que LoginRequest tiene: String mail, String password
         Optional<Usuario> optionalUsuario = usuarioRepository.findByMail(request.mail());
 
         Usuario usuario = optionalUsuario
@@ -120,5 +120,47 @@ public class UsuarioService {
                 usuario.getMail(),
                 token
         );
+    }
+
+    // ============================
+    // RECUPERAR CONTRASEÑA (SIMULADO)
+    // ============================
+
+    /**
+     * Paso 1: iniciar recuperación de contraseña.
+     * Modo académico: no informamos si el correo existe o no,
+     * solo dejamos trazas internas.
+     */
+    public void iniciarRecuperacionContrasena(String mail) {
+        Optional<Usuario> optionalUsuario = usuarioRepository.findByMail(mail);
+
+        if (optionalUsuario.isEmpty()) {
+            System.out.println("[RECUPERAR] Solicitud de recuperación para correo NO registrado: " + mail);
+            return;
+        }
+
+        Usuario usuario = optionalUsuario.get();
+
+        // En un escenario real:
+        // - generaríamos un token de recuperación
+        // - lo guardaríamos con expiración
+        // - enviaríamos un correo
+        System.out.println("[RECUPERAR] Se inició recuperación de contraseña para: " + usuario.getMail());
+    }
+
+    /**
+     * Paso 2: resetear contraseña del usuario.
+     * Flujo simple/ académico: solo valida que el correo exista.
+     */
+    public void resetearContrasena(String mail, String nuevaPassword) {
+        Optional<Usuario> optionalUsuario = usuarioRepository.findByMail(mail);
+
+        Usuario usuario = optionalUsuario
+                .orElseThrow(() -> new IllegalArgumentException("Correo no registrado"));
+
+        usuario.setPassword(passwordEncoder.encode(nuevaPassword));
+        usuarioRepository.save(usuario);
+
+        System.out.println("[RECUPERAR] Contraseña reseteada para: " + usuario.getMail());
     }
 }
