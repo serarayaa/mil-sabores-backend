@@ -123,6 +123,21 @@ public class UsuarioService {
     }
 
     // ============================
+    // ACTUALIZAR FOTO DE PERFIL (Base64)
+    // ============================
+    public void actualizarFotoPerfil(String rut, String imagenBase64) {
+        if (imagenBase64 == null || imagenBase64.isBlank()) {
+            throw new IllegalArgumentException("La imagen no puede estar vacía");
+        }
+
+        Usuario usuario = usuarioRepository.findById(rut)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+
+        usuario.setImagen(imagenBase64);
+        usuarioRepository.save(usuario);
+    }
+
+    // ============================
     // RECUPERAR CONTRASEÑA (SIMULADO)
     // ============================
 
@@ -133,14 +148,12 @@ public class UsuarioService {
      */
     public void iniciarRecuperacionContrasena(String mail) {
         Optional<Usuario> optionalUsuario = usuarioRepository.findByMail(mail);
-
         if (optionalUsuario.isEmpty()) {
             System.out.println("[RECUPERAR] Solicitud de recuperación para correo NO registrado: " + mail);
             return;
         }
 
         Usuario usuario = optionalUsuario.get();
-
         // En un escenario real:
         // - generaríamos un token de recuperación
         // - lo guardaríamos con expiración

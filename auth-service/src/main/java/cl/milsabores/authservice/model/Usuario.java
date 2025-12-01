@@ -3,7 +3,6 @@ package cl.milsabores.authservice.model;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-import jakarta.persistence.Lob;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -23,9 +22,7 @@ public class Usuario {
     private String rut;
 
     private String nombre;
-
     private String mail;
-
     private String password;
 
     // Rol del usuario (1 = cliente)
@@ -34,8 +31,12 @@ public class Usuario {
     // Integración futura con Firebase (puede quedar null)
     private String idfirebase;
 
-    @Lob
-    private byte[] imagen;
+    /**
+     * Imagen de perfil en formato Base64.
+     * Se almacena en la columna IMAGEN de Oracle.
+     */
+    @Column(name = "IMAGEN")
+    private String imagen;
 
     // Nueva columna: Fecha de nacimiento
     @Column(name = "FECHANAC")
